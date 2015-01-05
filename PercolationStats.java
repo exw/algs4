@@ -32,7 +32,6 @@ public class PercolationStats {
         boolean[] opened = new boolean[pSize];
         
         for (int k = 0; k < T; k++) {
-            System.out.println("Iteration: " + String.valueOf(k));
             Percolation p = new Percolation(N);
             reset(opened);
             int result = 0;
@@ -47,7 +46,6 @@ public class PercolationStats {
                     opened[target] = true;
                 }
             }
-            System.out.println("Percolates at " + String.valueOf(result));
             results[k] = result;
         }
     }

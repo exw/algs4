@@ -26,7 +26,6 @@ public class Percolation {
     private WeightedQuickUnionUF p;
     private boolean done;
     
-        
     public Percolation(int N) {
         if (N <= 0) {
             throw new java.lang.IllegalArgumentException();
@@ -36,6 +35,7 @@ public class Percolation {
         //initialize with all sites blocked
         status = new int[pSize];
         p = new WeightedQuickUnionUF(N*N);
+        done = false;
         return;
     }
     
@@ -55,15 +55,22 @@ public class Percolation {
     }
     
     private int combineStatus(int l, int r, int u, int d) {
-        int statusCode = 1;    
+        int statusCode = 1;
         if (l == 4 || r == 4 || u == 4 || d == 4) {
-            return 4;
+            statusCode = 4;
+                done = true;
         }
-        if (u == 2 || l == 2 || r == 2 || d == 2) {
-            statusCode = 2;
+        else if (u == 2 || l == 2 || r == 2 || d == 2) {
+            if (u == 3 || l == 3 || r == 3 || d == 3) {
+                statusCode = 4;
+                    done = true;
+            }
+            else {
+                statusCode = 2;
+            }
         }
-        if (d == 3 || l == 3 || r == 3 || d == 3) {
-            statusCode = statusCode + 2;
+        else if (d == 3 || l == 3 || r == 3 || d == 3) {
+            statusCode = 3;
         }
         return statusCode;
     }
@@ -125,11 +132,8 @@ public class Percolation {
                                       adjStatus[2], // u
                                       adjStatus[3]  // d
                                      );
-    
-        if (newStatus == 4) {
-            done = true;
-        }
-   
+        
+        status[target] = newStatus;
         status[p.find(target)] = newStatus;
         return;
     }
@@ -154,27 +158,25 @@ public class Percolation {
      * @param args
      */
     public static void main(String[] args) {
-        Percolation q = new Percolation(5);
-        q.open(1, 2);
-        if (q.isOpen(1, 2)) {
-            System.out.println("Open isOpen");
-        }
+        Percolation q = new Percolation(6);
+        q.open(1, 6);
+        q.open(2, 6);
+        q.open(3, 6);
+        q.open(4, 6);
+        q.open(5, 6);
         q.open(5, 5);
+        q.open(4, 4);
+        q.open(3, 4);
+        q.open(2, 4);
+        q.open(2, 3);
         q.open(2, 2);
-        q.open(3, 2);
-        q.open(4, 2);
+        q.open(2, 1);
+        q.open(3, 1);
         q.open(4, 1);
-        if (q.isFull(4, 1)) {
-            System.out.println("isFull working");
-        }
-        q.open(5, 3);
-        q.open(4, 3);
-        if (q.isFull(5, 5)) {
-            System.out.println("Backwash issue");
-        }
-        if (q.percolates()) {
-            System.out.println("Percolates");
-        }
+        q.open(5, 1);
+        q.open(5, 2);
+        q.open(6, 2);
+        q.open(5, 4);
         return;
 
     }
