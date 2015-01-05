@@ -1,184 +1,91 @@
 public class Percolation {
     
-    /*
-     * Week 1
-     * 
-     * The model: We model a percolation system using an N-by-N grid of sites. 
-     * Each site is either open or blocked. 
-     * A full site is an open site that can be connected to an open site 
-     * in the top row via a chain of neighboring (left, right, up, down) open sites. 
-     * We say the system percolates if there is a full site in the bottom row. 
-     * In other words, a system percolates if we fill all open sites connected 
-     * to the top row and that process fills some open site on the bottom row. 
-     * 
-     * */
-    
     private int gridLen;
-    private int pSize;
-    private int[] status;
-    /* status codes
-     * 0: blocked
-     * 1: open, not connected to top or bottom
-     * 2: open, connected to top
-     * 3: open, connected to bottom
-     * 4: open, connected to top and bottom
-     * */
+    private int gridSize;
+    private boolean[] openSite;
     private WeightedQuickUnionUF p;
-    private boolean done;
+    private WeightedQuickUnionUF backwash;
+    private int top;
+    private int bot;
     
     public Percolation(int N) {
         if (N <= 0) {
             throw new java.lang.IllegalArgumentException();
         }
         gridLen = N;
-        pSize = N*N;
-        //initialize with all sites blocked
-        status = new int[pSize];
-        p = new WeightedQuickUnionUF(N*N);
-        done = false;
-        return;
+        gridSize = N*N;
+        openSite = new boolean[gridSize + 2];
+        p = new WeightedQuickUnionUF(gridSize + 2);
+        backwash = new WeightedQuickUnionUF(gridSize + 1);
+        top = gridSize;
+        bot = gridSize + 1;
+        openSite[top] = true;
+        openSite[bot] = true;
     }
     
     private int pIndex(int i, int j) {
-        return (i-1)*gridLen + j-1;
+        return (i-1)*gridLen +j-1;
     }
     
     private boolean outOfRange(int i, int j) {
-        return (i <= 0 || i > gridLen || j <= 0 || j > gridLen);
+        return (i <= 0 || j <= 0 || i > gridLen || j > gridLen);
     }
     
     private void checkRange(int i, int j) {
         if (outOfRange(i, j)) {
-            throw new IndexOutOfBoundsException();
+            throw new java.lang.IndexOutOfBoundsException();
         }
         return;
     }
     
-    private int combineStatus(int l, int r, int u, int d) {
-        int statusCode = 1;
-        if (l == 4 || r == 4 || u == 4 || d == 4) {
-            statusCode = 4;
-                done = true;
+    private void connect(int s1, int s2) {
+        if (s1 == bot || s2 == bot) {
+            p.union(s1, s2);
         }
-        else if (u == 2 || l == 2 || r == 2 || d == 2) {
-            if (u == 3 || l == 3 || r == 3 || d == 3) {
-                statusCode = 4;
-                    done = true;
-            }
-            else {
-                statusCode = 2;
-            }
+        else if (openSite[s1] && openSite[s2]) {
+            p.union(s1, s2);
+            backwash.union(s1, s2);
         }
-        else if (d == 3 || l == 3 || r == 3 || d == 3) {
-            statusCode = 3;
-        }
-        return statusCode;
     }
     
-    
-    public void open(int i, int j) {
+    public void open(final int i, final int j) {
         checkRange(i, j);
+        
         int target = pIndex(i, j);
+        openSite[target] = true;
         
-        int[] adjIndex = new int[4];
-        int[] adjStatus = new int[4];
-        
-        // connect UF data structure with adjacent open sites
-        
-        // left is i,j-1
-        if (!outOfRange(i, j-1)) {
-            adjIndex[0] = pIndex(i, j-1);
-            adjStatus[0] = status[p.find(adjIndex[0])];
-            if (adjStatus[0] > 0) {
-                p.union(target, adjIndex[0]);
-            }
-        }
-        
-        // right is i,j+1    
-        if (!outOfRange(i, j+1)) {
-            adjIndex[1] = pIndex(i, j+1);
-            adjStatus[1] = status[p.find(adjIndex[1])];
-            if (adjStatus[1] > 0) {
-                p.union(target, adjIndex[1]);
-            }
-        }
-        
-        // up is i-1,j
-        if (!outOfRange(i-1, j)) {
-            adjIndex[2] = pIndex(i-1, j);
-            adjStatus[2] = status[p.find(adjIndex[2])];
-            if (adjStatus[2] > 0) {
-                p.union(target, adjIndex[2]);
-            }
-        }
+        if (i == 1) {
+            connect(target, top);
+        }        
         else {
-            adjStatus[2] = 2;
+            connect(target, pIndex(i-1, j));
         }
-
-        // down is i+1,j
-        if (!outOfRange(i+1, j)) {
-            adjIndex[3] = pIndex(i+1, j);
-            adjStatus[3] = status[p.find(adjIndex[3])];
-            if (adjStatus[3] > 0) {
-                p.union(target, adjIndex[3]);
-            }
-        }
+        
+        if (i == gridLen) {
+            connect(target, bot);
+        } 
         else {
-            adjStatus[3] = 3;
+            connect(target, pIndex(i+1, j));
         }
-        
-        int newStatus = combineStatus(adjStatus[0], // l
-                                      adjStatus[1], // r
-                                      adjStatus[2], // u
-                                      adjStatus[3]  // d
-                                     );
-        
-        status[target] = newStatus;
-        status[p.find(target)] = newStatus;
-        return;
+        if (j > 1) {
+            connect(target, pIndex(i, j-1));
+        }
+        if (j < gridLen) {
+            connect(target, pIndex(i, j+1));
+        }
     }
     
-    public boolean isOpen(int i, int j) {
+    public boolean isOpen(final int i, final int j) {
         checkRange(i, j);
-        return (status[p.find(pIndex(i, j))] > 0);
-        
+        return openSite[pIndex(i, j)];
     }
     
-    public boolean isFull(int i, int j) {
+    public boolean isFull(final int i, final int j) {
         checkRange(i, j);
-        return (status[p.find(pIndex(i, j))] % 2 == 0 
-                && status[p.find(pIndex(i, j))] > 0);
+        return backwash.connected(top, pIndex(i, j));
     }
     
     public boolean percolates() {
-        return done;
+        return p.connected(top, bot);
     }
-
-    /**
-     * @param args
-     */
-    public static void main(String[] args) {
-        Percolation q = new Percolation(6);
-        q.open(1, 6);
-        q.open(2, 6);
-        q.open(3, 6);
-        q.open(4, 6);
-        q.open(5, 6);
-        q.open(5, 5);
-        q.open(4, 4);
-        q.open(3, 4);
-        q.open(2, 4);
-        q.open(2, 3);
-        q.open(2, 2);
-        q.open(2, 1);
-        q.open(3, 1);
-        q.open(4, 1);
-        q.open(5, 1);
-        q.open(5, 2);
-        q.open(6, 2);
-        q.open(5, 4);
-        return;
-
-    }
-
 }
